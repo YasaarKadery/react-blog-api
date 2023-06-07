@@ -57,7 +57,7 @@ func main() {
 			return
 		}
 	})
-	router.GET("/", app.homePage)
+
 	router.GET("/posts", app.getPosts)
 	router.POST("/posts", app.createPost)
 	router.GET("/posts/:id", app.getPost)
@@ -65,19 +65,7 @@ func main() {
 	router.DELETE("/posts/:id", app.deletePost)
 	log.Fatal(http.ListenAndServe(":80", router))
 }
-func (app *application) homePage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	var post Post = Post{
-		ID:        0,
-		Title:     "Home",
-		Content:   "",
-		CreatedAt: "",
-		UpdatedAt: "",
-		ImageSrc:  "",
-		Markdown:  "",
-	}
 
-	json.NewEncoder(w).Encode(post)
-}
 func (app *application) enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -86,7 +74,7 @@ func (app *application) enableCors(w *http.ResponseWriter) {
 
 func (app *application) getPosts(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	app.enableCors(&w)
-
+	w.Header().Set("Content-Type", "application/json")
 	var posts []Post
 	result, err := app.db.Query("SELECT id, title, content, created_at,updated_at, image_src, markdown from posts")
 	if err != nil {
