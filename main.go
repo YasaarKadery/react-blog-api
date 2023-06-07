@@ -9,7 +9,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -28,30 +29,26 @@ type application struct {
 }
 
 func main() {
-	cfg := mysql.Config{
-		User:                 os.Getenv("DB_USER"),
-		Passwd:               os.Getenv("DB_PASSWORD"),
-		Net:                  "tcp",
-		Addr:                 "127.0.0.1:3306",
-		DBName:               "blog_db",
-		AllowNativePasswords: true,
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("error loading env files")
 	}
 
-	db, err := sql.Open("mysql", cfg.FormatDSN())
+	dbCreds := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?timeout=5s", os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("RDS_ENDPOINT"), os.Getenv("RDS_PORT"), os.Getenv("DB_NAME"))
+	db, err := sql.Open("mysql", dbCreds)
+
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 
 	defer db.Close()
-
 	err = db.Ping()
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	app := application{
 		db: db,
 	}
-
 	router := httprouter.New()
 	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// If "OPTIONS" request, respond immediately
@@ -60,15 +57,27 @@ func main() {
 			return
 		}
 	})
-
+	router.GET("/", app.homePage)
 	router.GET("/posts", app.getPosts)
 	router.POST("/posts", app.createPost)
 	router.GET("/posts/:id", app.getPost)
 	router.PUT("/posts/:id", app.updatePost)
 	router.DELETE("/posts/:id", app.deletePost)
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":80", router))
 }
+func (app *application) homePage(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var post Post = Post{
+		ID:        0,
+		Title:     "Home",
+		Content:   "",
+		CreatedAt: "",
+		UpdatedAt: "",
+		ImageSrc:  "",
+		Markdown:  "",
+	}
 
+	json.NewEncoder(w).Encode(post)
+}
 func (app *application) enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
@@ -77,6 +86,7 @@ func (app *application) enableCors(w *http.ResponseWriter) {
 
 func (app *application) getPosts(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	app.enableCors(&w)
+
 	var posts []Post
 	result, err := app.db.Query("SELECT id, title, content, created_at,updated_at, image_src, markdown from posts")
 	if err != nil {
