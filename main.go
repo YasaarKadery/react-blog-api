@@ -114,6 +114,7 @@ func (app *application) createPost(w http.ResponseWriter, r *http.Request, _ htt
 
 func (app *application) getPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	app.enableCors(&w)
+	w.Header().Set("Content-Type", "application/json")
 	id, _ := strconv.Atoi(ps.ByName("id"))
 	result, err := app.db.Query("SELECT id, title, content, created_at, updated_at, image_src, markdown FROM posts WHERE id = ?", id)
 	if err != nil {
