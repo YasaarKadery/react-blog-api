@@ -50,14 +50,6 @@ func main() {
 		db: db,
 	}
 	router := httprouter.New()
-	router.GlobalOPTIONS = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If "OPTIONS" request, respond immediately
-		if r.Header.Get("Access-Control-Request-Method") != "" {
-			app.enableCors(&w)
-			return
-		}
-	})
-
 	router.GET("/posts", app.getPosts)
 	router.POST("/posts", app.createPost)
 	router.GET("/posts/:id", app.getPost)
@@ -66,14 +58,8 @@ func main() {
 	log.Fatal(http.ListenAndServe(":80", router))
 }
 
-func (app *application) enableCors(w *http.ResponseWriter) {
-	(*w).Header().Set("Access-Control-Allow-Origin", "https://yasaarkadery.com")
-	(*w).Header().Set("Access-Control-Allow-Methods", "GET")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-}
-
 func (app *application) getPosts(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	app.enableCors(&w)
+
 	w.Header().Set("Content-Type", "application/json")
 	var posts []Post
 	result, err := app.db.Query("SELECT id, title, content, created_at,updated_at, image_src, markdown from posts")
@@ -93,7 +79,7 @@ func (app *application) getPosts(w http.ResponseWriter, r *http.Request, _ httpr
 }
 
 func (app *application) createPost(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	app.enableCors(&w)
+
 	var post Post
 	_ = json.NewDecoder(r.Body).Decode(&post)
 	stmt, err := app.db.Prepare("INSERT INTO posts(Title,Content,image_src, markdown) VALUES(?,?,?,?)")
@@ -113,7 +99,7 @@ func (app *application) createPost(w http.ResponseWriter, r *http.Request, _ htt
 }
 
 func (app *application) getPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	app.enableCors(&w)
+
 	w.Header().Set("Content-Type", "application/json")
 	id, _ := strconv.Atoi(ps.ByName("id"))
 	result, err := app.db.Query("SELECT id, title, content, created_at, updated_at, image_src, markdown FROM posts WHERE id = ?", id)
@@ -132,7 +118,7 @@ func (app *application) getPost(w http.ResponseWriter, r *http.Request, ps httpr
 }
 
 func (app *application) updatePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	app.enableCors(&w)
+
 	id, _ := strconv.Atoi(ps.ByName("id"))
 	var post Post
 	_ = json.NewDecoder(r.Body).Decode(&post)
@@ -148,7 +134,7 @@ func (app *application) updatePost(w http.ResponseWriter, r *http.Request, ps ht
 }
 
 func (app *application) deletePost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	app.enableCors(&w)
+
 	id, _ := strconv.Atoi(ps.ByName("id"))
 	stmt, err := app.db.Prepare("DELETE FROM posts WHERE id = ?")
 	if err != nil {
